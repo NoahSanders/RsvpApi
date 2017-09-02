@@ -10,4 +10,7 @@ module.exports = function(app) {
     app.route('/guests/:guestId')
         .get(guests.get_guest)
         .put(guests.update_guest);
+
+    app.route('/guests/search/:lastName')
+        .get(guests.search_guests);
 }
