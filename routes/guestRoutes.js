@@ -4,13 +4,10 @@ module.exports = function(app) {
 
     //guest Routes
     app.route('/guests')
-        .get(guests.get_all_guests)
+        .get(guests.get_guests)
         .post(guests.create_guest);
 
     app.route('/guests/:guestId')
-        .get(guests.get_guest)
+        .get(guests.get_guest_by_id)
         .put(guests.update_guest);
-
-    app.route('/guests/search/:lastName')
-        .get(guests.search_guests);
 }

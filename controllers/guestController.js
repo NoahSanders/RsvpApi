@@ -3,13 +3,72 @@ const sanitizer = require('sanitizer');
 const login = require('./login.json');
 const util = require('util');
 
-exports.get_all_guests = function(req, res) {
-    var connection = getConnection();
+exports.get_guests = function(request, response) {
+    try {
+        var connection = getConnection();
+        var lastName = request.query.lastName ? sanitizer.sanitize(request.query.lastName) : null;
+        var resultObj = {
+            "result_count": 0,
+            "guests": []
+        };
+        console.log(lastName);
 
-    connection.end((err) => {
-        console.log('Error ending db connection ' + err.code + ' ' + message);
-    });
-}
+        if (lastName) {
+            connection.query("SELECT * FROM guest WHERE last_name = ?", lastName, (db_error, db_results) => {
+                console.log('found in select lastname query ' + db_results.length);
+                if (db_results.length) {
+                    resultObj.result_count = db_results.length;
+                    for (var i=0; i<db_results.length; i++) {
+                        let currentGuest = {
+                            "id": db_results[i].id,
+                            "name": db_results[i].name, 
+                            "address_1": db_results[i].address_1,
+                            "address_2": db_results[i].address_2, 
+                            "city": db_results[i].city,
+                            "state": db_results[i].state, 
+                            "zip_code": db_results[i].zip_code, 
+                            "suggested_guest_count": db_results[i].suggested_guest_count,
+                            "guest_count": db_results[i].guest_count,
+                            "status": db_results[i].status
+                        };
+                        resultObj.guests.push(currentGuest);
+                    }
+                }
+                response.status(200).json(resultObj);
+            });
+        }
+        else {
+            connection.query("SELECT * FROM guest", (db_error, db_results) => {
+                console.log('found in select all query ' + db_results.length);
+                if (db_results.length) {
+                    resultObj.result_count = db_results.length;
+                    for (var i=0; i<db_results.length; i++) {
+                        let currentGuest = {
+                            "id": db_results[i].id,
+                            "name": db_results[i].name, 
+                            "address_1": db_results[i].address_1,
+                            "address_2": db_results[i].address_2, 
+                            "city": db_results[i].city,
+                            "state": db_results[i].state, 
+                            "zip_code": db_results[i].zip_code, 
+                            "suggested_guest_count": db_results[i].suggested_guest_count,
+                            "guest_count": db_results[i].guest_count,
+                            "status": db_results[i].status
+                        };
+                        resultObj.guests.push(currentGuest);
+                    }
+                }
+                response.status(200).json(resultObj);
+            });
+        }
+        
+        connection.end();
+    }
+    catch (exception) {
+        console.log("Unexpected error getting guests: " + util.inspect(exception));
+        if (!response.finished) response.status(500).json(exception);
+    }
+};
 
 exports.create_guest = function(request, response) {
     var connection = getConnection();
@@ -20,7 +79,7 @@ exports.create_guest = function(request, response) {
             throw err;
         }
         console.log('Inserted ID ' + db_response.insertId);
-        response.status(200).json({"ID": db_response.insertId});
+        response.status(201).json({"ID": db_response.insertId});
     });
 
     connection.end((err) => {
@@ -28,20 +87,22 @@ exports.create_guest = function(request, response) {
             console.log('Error ending db connection ' + err.code + ' ' + message);
         }
     });
-}
+};
 
-exports.get_guest = function(request, response) {
+exports.get_guest_by_id = function(request, response) {
     try {
-        var ID = request.params.guestId;
-        if (!ID) {
-            throw {"name": "InternalError", "source": "getGuestDetails", "message":'No ID specified'};
+        var ID = Number(request.params.guestId);
+
+        if (!ID || !Number.isInteger(ID)) {
+            response.status(400).json({"message": "Incorrect search term provided"});
+            throw {"name": "BadRequestMessage", "source": "get_guest_by_id", "message":'No ID specified'};
         }
         var guest = {};
 
         var connection = getConnection();
 
         connection.query("SELECT * FROM guest WHERE id = ?", ID, (db_error, db_results) => {
-            console.log('connection found ' + db_results.length + ' things');
+            console.log('connection found ' + db_results.length + ' thing for ID ' + ID);
             if (db_results.length) {
                 var result = db_results[0];
                 response.status(200).json({
@@ -58,16 +119,16 @@ exports.get_guest = function(request, response) {
                 });
             }
             else {
-                throw {"name": "InternalError", "source": "get_guest", "message":'No record found with ID' + ID};
+                response.status(200).json({});
             }
         });
         connection.end();
     }
     catch (exception) {
-        console.log("Error updating guest: " + util.inspect(exception));
+        console.log("Unexpected error getting guest: " + util.inspect(exception));
         if (!response.finished) response.status(500).json(exception);
     }
-}
+};
 
 exports.search_guests = function(request, response) {
     try {
@@ -97,7 +158,7 @@ exports.search_guests = function(request, response) {
         console.log("Error searching guests: " + util.inspect(exception));
         if (!response.finished) response.status(500).json(exception);
     }
-}
+};
 
 exports.update_guest = function(req, response) {
     try {
@@ -135,45 +196,7 @@ exports.update_guest = function(req, response) {
         console.log("Error updating guest: " + util.inspect(exception));
         if (!response.finished) response.status(500).json(exception);
     }
-}
-
-function getGuestDetails(ID) {
-    try {
-        if (!ID) {
-            throw {"name": "InternalError", "source": "getGuestDetails", "message":'No ID specified'};
-        }
-        var guest = {};
-
-        var connection = getConnection();
-
-        connection.query("SELECT * FROM guest WHERE id = ?", ID, (db_error, db_results) => {
-            console.log('connection found ' + db_results.length + ' things');
-            if (db_results.length) {
-                var result = db_results[0];
-                guest = {
-                    "id": result.id,
-                    "name": result.name, 
-                    "address_1": result.address_1,
-                    "address_2": result.address_2, 
-                    "city": result.city,
-                    "state": result.state, 
-                    "zip_code": result.zip_code, 
-                    "suggested_guest_count": result.suggested_guest_count,
-                    "guest_count": result.guest_count,
-                    "status": result.status
-                };
-                return guest;
-            }
-            else {
-                throw {"name": "InternalError", "source": "getGuestDetails", "message":'No record found with ID' + ID};
-            }
-        });
-        connection.end();
-    }
-    catch (exception) {
-        console.log('error getting guestDetails ' + util.inspect(exception));
-    }
-}
+};
 
 function getConnection() {
     const connection = mysql.createConnection(login);
