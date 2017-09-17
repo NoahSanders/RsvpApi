@@ -5,6 +5,8 @@ const util = require('util');
 
 exports.create_message = function(request, response) {
     var connection = getConnection();
+    request.body.message = sanitizer.sanitize(request.body.message);
+    request.body.guest_id = sanitizer.sanitize(request.body.guest_id);
 
     connection.query('INSERT INTO message SET ?', request.body, (db_error, db_response) => {
         if (db_error) {
