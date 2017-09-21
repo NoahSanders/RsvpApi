@@ -14,7 +14,12 @@ exports.get_guests = function(request, response) {
         console.log(lastName);
 
         if (lastName) {
-            connection.query("SELECT * FROM guest WHERE last_name = ?", lastName, (db_error, db_results) => {
+            connection.query("SELECT * FROM guest WHERE last_name LIKE ?", '%'+lastName+'%', (db_error, db_results) => {
+                if (db_error) {
+                    console.error('ERROR occurred getting last name ' + lastName + ' error obj' + util.inspect(db_error));
+                    throw db_error;
+                }
+
                 console.log('found in select lastname query ' + db_results.length);
                 if (db_results.length) {
                     resultObj.result_count = db_results.length;
