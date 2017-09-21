@@ -9,7 +9,8 @@ exports.create_message = function(request, response) {
     request.body.message = sanitizer.sanitize(request.body.message);
     request.body.guest_id = sanitizer.sanitize(request.body.guest_id);
     if (!request.body.guest_id) {
-        sendEmail('RSVP Message received', request.body.message, 'noahcsan@gmail.com');
+        let messageBody = 'Name: ' + request.body.custom_name + ', Contact Email: ' + request.body.contact_email + ', Message: ' + request.body.message;
+        sendEmail('RSVP Message received', messageBody, login.email_recipients);
     }
 
     connection.query('INSERT INTO message SET ?', request.body, (db_error, db_response) => {
