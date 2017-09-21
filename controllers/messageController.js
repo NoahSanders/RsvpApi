@@ -2,11 +2,15 @@ const mysql = require('mysql');
 const sanitizer = require('sanitizer');
 const login = require('./login.json');
 const util = require('util');
+const nodemailer = require('nodemailer');
 
 exports.create_message = function(request, response) {
     var connection = getConnection();
     request.body.message = sanitizer.sanitize(request.body.message);
     request.body.guest_id = sanitizer.sanitize(request.body.guest_id);
+    if (!request.body.guest_id) {
+        sendEmail('RSVP Message received', request.body.message, 'noahcsan@gmail.com');
+    }
 
     connection.query('INSERT INTO message SET ?', request.body, (db_error, db_response) => {
         if (db_error) {
@@ -33,4 +37,31 @@ function getConnection() {
         }
     });
     return connection;
+}
+
+function sendEmail(subject, body, recipient) {
+    let transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+            user: login.sender_email_address,
+            pass: login.sender_email_password
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    });
+
+    let mailOptions = {
+        from: login.sender_email_address, 
+        to: recipient, 
+        subject: subject, 
+        text: body 
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            return console.error(util.inspect(error));
+        }
+        console.log('sent email');
+    });
 }
